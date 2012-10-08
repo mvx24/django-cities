@@ -81,10 +81,22 @@ class CityBase(Place):
     def __unicode__(self):
         return u'{}, {}'.format(force_unicode(self.name_std), self.parent)
 
+class CityManager(models.GeoManager):
+    def nearest_to(self, lat, lon, count = 0):
+        p = Point(float(lat), float(lon))
+        return self.nearest_to_point(p, count)
+
+    def nearest_to_point(self, point, count = 0):
+        if count > 0:
+            return self.distance(point).order_by('distance')[:count]
+        return self.distance(point).order_by('distance')[0]
+
 class City(CityBase):
     region = models.ForeignKey(Region, null=True, blank=True)
     subregion = models.ForeignKey(Subregion, null=True, blank=True)
     country = models.ForeignKey(Country)
+
+    objects = CityManager()
 
     class Meta:
         verbose_name_plural = "cities"
@@ -92,6 +104,13 @@ class City(CityBase):
     @property
     def parent(self):
         return self.region
+        
+   	def nearest_district_to(self, lat, lon):
+   	   	p = Point(float(lat), float(lon))
+   	   	return self.nearest_district_to_point(p)
+
+   	def nearest_district_to_point(self, point):
+   	   	return self.district_set.distance(point).order_by('distance')[0]
 
 class District(CityBase):
     city = models.ForeignKey(City)
