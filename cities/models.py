@@ -1,6 +1,7 @@
 from django.utils.encoding import force_unicode
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
+from django.template.defaultfilters import slugify
 from conf import settings
 from util import create_model, un_camel
 
@@ -25,8 +26,8 @@ class Place(models.Model):
         list.append(self)
         return list
 
-    def get_absolute_url(self):
-        return "/".join([place.slug for place in self.hierarchy])
+    #def get_absolute_url(self):
+    #    return "/".join([place.slug for place in self.hierarchy])
 
 class Country(Place):
     code = models.CharField(max_length=2, db_index=True)
@@ -41,6 +42,9 @@ class Country(Place):
     @property
     def parent(self):
         return None
+        
+    def get_absolute_url(self):
+        return '/%s' % slugify(self.code)
 
     def __unicode__(self):
         return force_unicode(self.name)
@@ -62,6 +66,9 @@ class Region(RegionBase):
     @property
     def parent(self):
         return self.country
+        
+    def get_absolute_url(self):
+        return '/%s/%s' % (slugify(self.country.code), slugify(self.name))
 
 class Subregion(RegionBase):
     region = models.ForeignKey(Region)
@@ -82,8 +89,8 @@ class CityBase(Place):
         return u'{}, {}'.format(force_unicode(self.name_std), self.parent)
 
 class CityManager(models.GeoManager):
-    def nearest_to(self, lat, lon, count = 0):
-        p = Point(float(lat), float(lon))
+    def nearest_to(self, x, y, count = 0):
+        p = Point(float(x), float(y))
         return self.nearest_to_point(p, count)
 
     def nearest_to_point(self, point, count = 0):
@@ -104,13 +111,19 @@ class City(CityBase):
     @property
     def parent(self):
         return self.region
-        
-   	def nearest_district_to(self, lat, lon):
-   	   	p = Point(float(lat), float(lon))
-   	   	return self.nearest_district_to_point(p)
+    
+    def get_absolute_url(self):
+        if self.region:
+            return '/%s/%s/%s' % (slugify(self.country.code), slugify(self.region.name), slugify(self.name))
+        else:
+            return '/%s/%s' % (slugify(self.country.code), slugify(self.name))
+    
+    def nearest_district_to(self, x, y):
+        p = Point(float(x), float(y))
+        return self.nearest_district_to_point(p)
 
-   	def nearest_district_to_point(self, point):
-   	   	return self.district_set.distance(point).order_by('distance')[0]
+    def nearest_district_to_point(self, point):
+        return self.district_set.distance(point).order_by('distance')[0]
 
 class District(CityBase):
     city = models.ForeignKey(City)

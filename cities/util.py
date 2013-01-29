@@ -60,4 +60,3 @@ def create_model(name, fields=None, app_label='', module='', options=None, admin
         admin.site.register(model, Admin)
 
     return model
-    
