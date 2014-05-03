@@ -39,6 +39,9 @@ class Country(Place):
         ordering = ['name']
         verbose_name_plural = "countries"
 
+    class API:
+        exclude_fields = ('tld',)
+
     @property
     def parent(self):
         return None
@@ -63,6 +66,10 @@ class RegionBase(Place):
         return u'{}, {}'.format(force_unicode(self.name_std), self.parent)
 
 class Region(RegionBase):
+
+    class API:
+        exclude_fields = ('country',)
+
     @property
     def parent(self):
         return self.country
@@ -88,6 +95,14 @@ class CityBase(Place):
     def __unicode__(self):
         return u'{}, {}'.format(force_unicode(self.name_std), self.parent)
 
+    @property
+    def latitude(self):
+        return self.location.y
+
+    @property
+    def longitude(self):
+        return self.location.x
+
 class CityManager(models.GeoManager):
     def nearest_to(self, x, y, count = 0):
         p = Point(float(x), float(y))
@@ -107,6 +122,12 @@ class City(CityBase):
 
     class Meta:
         verbose_name_plural = "cities"
+
+    class API:
+        exclude_fields = ("location", )
+        include_related = ("region", "country")
+        include_attributes = ("latitude", "longitude")
+        list_attributes = ("latitude", "longitude")
 
     @property
     def parent(self):
@@ -207,6 +228,14 @@ class PostalCode(Place):
             force_unicode(self.district_name),
             force_unicode(self.name),
         ] if e]
+
+    @property
+    def latitude(self):
+        return self.location.y
+
+    @property
+    def longitude(self):
+        return self.location.x
 
     def __unicode__(self):
         return force_unicode(self.code)
